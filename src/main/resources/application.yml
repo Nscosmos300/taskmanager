@@ -3,7 +3,7 @@ spring:
     name: taskmanager
   data:
     mongodb:
-      uri: ${MONGO_URI:mongodb+srv://nikhilsingh_db_user:2Sc8krgTHq9db0lI@testdbonline.8l4hjf7.mongodb.net/taskmanagerdb?retryWrites=true&w=majority&appName=TestDBOnline}
+      uri: ${MONGO_URI}
   mvc:
     format:
       date: yyyy-MM-dd
