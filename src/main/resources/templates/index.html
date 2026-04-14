@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
+    <style>
+        body { background-color: #f4f7f4; }
+        .card { border-radius: 12px; }
+        .badge-HIGH    { background: #ffe0e0; color: #c0392b; }
+        .badge-MEDIUM  { background: #fff4d6; color: #d68910; }
+        .badge-LOW     { background: #e0f5e0; color: #1e8449; }
+        .priority-badge {
+            font-size: 0.72rem; font-weight: 700;
+            padding: 3px 10px; border-radius: 12px;
+            text-transform: uppercase; letter-spacing: 0.05em;
+        }
+        .task-title { font-size: 1rem; }
+        .task-title.done { text-decoration: line-through; color: #aaa; }
+        .due-date { font-size: 0.78rem; color: #888; }
+        .due-overdue { color: #e74c3c; font-weight: 600; }
+        .filter-btn.active { background-color: #2d7a2d !important; color: white !important; }
+    </style>
+</head>
+<body>
+<div class="container py-5" style="max-width: 680px;">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="fw-bold" style="color:#2d7a2d;">🌿 My Task Manager</h2>
+        <div class="d-flex align-items-center gap-3">
+        <span class="text-muted" style="font-size:0.9rem;">
+            ✅ <strong th:text="${totalAll - completedCount}"></strong>
+            of <strong th:text="${totalAll}"></strong> tasks remaining
+        </span>
+            <span class="text-muted" style="font-size:0.85rem;">
+            👤 <span th:text="${username}"></span>
+        </span>
+            <form action="/logout" method="post" class="mb-0">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Task Form -->
+    <div class="card shadow-sm p-4 mb-4">
+        <form action="/add" method="post">
+            <div class="row g-2">
+                <div class="col-12 col-md-5">
+                    <input type="text" name="title" class="form-control"
+                           placeholder="New task..." required />
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="priority" class="form-select">
+                        <option value="HIGH">🔴 High</option>
+                        <option value="MEDIUM" selected>🟡 Medium</option>
+                        <option value="LOW">🟢 Low</option>
+                    </select>
+                    <small class="text-muted ms-1">🎯 Priority</small>
+                </div>
+                <div class="col-6 col-md-3">
+                    <input type="date" name="dueDate" class="form-control"
+                           placeholder="Due Date" title="Due Date" />
+                    <small class="text-muted ms-1">📅 Due date</small>
+                </div>
+                <div class="col-12 col-md-1 d-grid">
+                    <button type="submit" class="btn btn-success">+</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="btn-group mb-3 w-100" role="group">
+        <a th:href="@{/?filter=ALL}"
+           th:classappend="${filter == 'ALL'} ? ' active' : ''"
+           class="btn btn-outline-success filter-btn">All</a>
+        <a th:href="@{/?filter=ACTIVE}"
+           th:classappend="${filter == 'ACTIVE'} ? ' active' : ''"
+           class="btn btn-outline-success filter-btn">Active</a>
+        <a th:href="@{/?filter=COMPLETED}"
+           th:classappend="${filter == 'COMPLETED'} ? ' active' : ''"
+           class="btn btn-outline-success filter-btn">Completed</a>
+    </div>
+
+    <!-- Task List -->
+    <div class="card shadow-sm">
+        <ul class="list-group list-group-flush" id="taskList">
+
+            <!-- Edit Mode Row -->
+            <li class="list-group-item py-3" th:if="${editTask != null}"
+                style="background:#fffbe6; border-left: 4px solid #f0ad4e;">
+                <form th:action="@{/edit/{id}(id=${editTask.id})}" method="post">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-5">
+                            <input type="text" name="title" class="form-control form-control-sm"
+                                   th:value="${editTask.title}" required />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select name="priority" class="form-select form-select-sm">
+                                <option value="HIGH"   th:selected="${editTask.priority == 'HIGH'}">🔴 High</option>
+                                <option value="MEDIUM" th:selected="${editTask.priority == 'MEDIUM'}">🟡 Medium</option>
+                                <option value="LOW"    th:selected="${editTask.priority == 'LOW'}">🟢 Low</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <input type="date" name="dueDate" class="form-control form-control-sm"
+                                   th:value="${editTask.dueDate}" />
+                        </div>
+                        <div class="col-12 col-md-2 d-flex gap-1">
+                            <button type="submit" class="btn btn-sm btn-success">Save</button>
+                            <a href="/" class="btn btn-sm btn-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </li>
+
+            <!-- Task Rows -->
+            <li class="list-group-item py-3 d-flex align-items-center gap-3"
+                th:each="task : ${tasks}">
+
+                <!-- Priority Badge -->
+                <span class="priority-badge"
+                      th:classappend="'badge-' + ${task.priority}"
+                      th:text="${task.priority}">
+                </span>
+
+                <!-- Title + Due Date -->
+                <div class="flex-grow-1">
+                    <div class="task-title" th:text="${task.title}"
+                         th:classappend="${task.completed} ? 'done' : ''"></div>
+                    <div th:if="${task.dueDate != null}" class="due-date"
+                         th:classappend="${task.dueDate.isBefore(#temporals.createToday()) and !task.completed} ? 'due-overdue' : ''">
+                        📅 <span th:text="${#temporals.format(task.dueDate, 'dd MMM yyyy')}"></span>
+                        <span th:if="${task.dueDate.isBefore(#temporals.createToday()) and !task.completed}"> ⚠️ Overdue</span>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex gap-2">
+                    <a th:href="@{/toggle/{id}(id=${task.id})}"
+                       class="btn btn-sm btn-outline-success">
+                        <i th:classappend="${task.completed} ? 'bi-arrow-counterclockwise' : 'bi-check-lg'" class="bi"></i>
+                    </a>
+                    <a th:href="@{/edit/{id}(id=${task.id})}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a th:href="@{/delete/{id}(id=${task.id})}"
+                       class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </li>
+
+            <!-- Empty State -->
+            <li class="list-group-item text-center text-muted py-4"
+                th:if="${#lists.isEmpty(tasks)}">
+                No tasks here! 🌱 Add one above.
+            </li>
+
+        </ul>
+    </div>
+</div>
+</body>
+</html>
